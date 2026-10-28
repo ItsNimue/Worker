@@ -1,0 +1,10 @@
+{
+  "name": "vcall-worker",
+  "version": "1.0.0",
+  "description": "WhatsApp Web custom video call worker (Chromium fake camera)",
+  "type": "module",
+  "main": "worker.js",
+  "scripts": { "start": "node worker.js" },
+  "dependencies": { "playwright": "1.56.0" },
+  "engines": { "node": ">=20" }
+}
