@@ -37,7 +37,7 @@ const VIDEO_FILE = path.join(DATA, 'video.mjpeg');
 const AUDIO_FILE = path.join(DATA, 'audio.wav');
 const STATE_FILE = path.join(DATA, 'state.json');
 
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
 
 let state = { enabled: false, hasVideo: false, updatedAt: 0 };
 let ctx = null;
@@ -155,6 +155,27 @@ function mainPage() {
     return ctx?.pages()?.[0] || null;
 }
 
+// WhatsApp Web එකේ "Calls" tab එක තියෙනවාද (calling feature එක මේ account/browser එකට on වෙලාද කියලා බලන්න)
+async function callsTabAvailable() {
+    const page = mainPage();
+    if (!page) return false;
+
+    try {
+        return await page.getByRole('button', { name: /^calls$/i }).first().isVisible({ timeout: 300 });
+    } catch {
+        return false;
+    }
+}
+
+// "What's new on WhatsApp Web" වගේ dialogs වලට Continue ඔබනවා (call UI එක block වෙන්න එපා)
+async function dismissDialogs() {
+    const page = mainPage();
+    if (!page || inCall) return;
+
+    const btn = await findVisible(page.getByRole('button', { name: /^(continue|got it|ok)$/i }));
+    if (btn) await btn.click().catch(() => {});
+}
+
 async function loginState() {
     const page = mainPage();
     if (!page) return 'stopped';
@@ -241,7 +262,7 @@ async function checkIncomingCall() {
     }
 }
 
-setInterval(() => { checkIncomingCall().catch(() => {}); }, 1500);
+setInterval(() => { dismissDialogs().then(checkIncomingCall).catch(() => {}); }, 1500);
 
 // ───────── HTTP API ─────────
 
@@ -278,6 +299,7 @@ const server = http.createServer(async (req, res) => {
             return json(res, 200, {
                 ...state,
                 login: await loginState(),
+                callsTab: await callsTabAvailable(),
                 inCall,
                 lastCallAt,
                 restarting,
